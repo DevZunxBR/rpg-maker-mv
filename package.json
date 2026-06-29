@@ -1,0 +1,11 @@
+{
+  "name": "aethelgard-mv",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gerador de dados (data/*.json) para o RPG 'As Crônicas de Aethelgard' no RPG Maker MV",
+  "scripts": {
+    "build": "node tools/mvgen/index.js",
+    "validate": "node tools/mvgen/validate.js"
+  },
+  "license": "MIT"
+}
