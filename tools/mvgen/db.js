@@ -261,6 +261,7 @@ function troops() {
     mk(4, 'Goblins', [member(5, 320, 300), member(5, 480, 300), member(2, 400, 260)]),
     mk(5, 'Esqueletos', [member(6, 360, 300), member(6, 480, 300)]),
     mk(6, 'Espectros', [member(7, 340, 290), member(7, 500, 290)]),
+    mk(7, 'Lobo Sombrio', [member(4, 410, 300)]),
     mk(10, 'CHEFE: Golem do Cristal', [member(50, 420, 300)]),
     mk(11, 'CHEFE FINAL: Devorador', [member(51, 420, 280)]),
   ];

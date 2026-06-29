@@ -7,7 +7,6 @@ const { buildSystem } = require('./system');
 const { commonEvents } = require('./commonevents');
 const { buildSwitchNames, buildVariableNames } = require('./constants');
 const M = require('./maps');
-const { villages } = require('./villages');
 
 const OUT = path.resolve(__dirname, '../../data');
 
@@ -56,10 +55,7 @@ function main() {
   })));
 
   // ---- Mapas ----
-  M.buildIntro();
-  M.buildWorldMap(villages);
-  villages.forEach((v) => M.buildVillage(v));
-  M.buildCrystalCave();
+  M.buildAll();
 
   // grava cada mapa como MapXXX.json (3 dígitos)
   let mapCount = 0;
@@ -75,7 +71,7 @@ function main() {
 
   console.log('Gerado em', OUT);
   console.log('Arquivos:', written.join(', '));
-  console.log('Total de mapas:', mapCount, '| Vilarejos:', villages.length);
+  console.log('Total de mapas:', mapCount);
 }
 
 main();

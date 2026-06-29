@@ -1,121 +1,166 @@
 'use strict';
-// Helpers para gerar comandos de evento e estruturas do RPG Maker MV.
-// Todo comando é { code, indent, parameters }. A lista SEMPRE termina com { code:0 }.
+// Construtor de listas de comando do RPG Maker MV com controle CORRETO de indentação.
+// O MV navega ramificações pela indentação e por marcadores: condição 111/411(else)/412(fim);
+// escolhas 102/402(when)/403(cancel)/404(fim). Esta classe emite tudo certinho.
 
-/** Cria uma lista de comandos a partir de fábricas, normalizando indent e terminador. */
-function cmdList(builders, baseIndent = 0) {
-  const list = [];
-  const push = (code, parameters = [], indent = baseIndent) =>
-    list.push({ code, indent, parameters });
-
-  for (const b of builders) {
-    if (typeof b === 'function') b({ push, list, baseIndent });
-    else if (Array.isArray(b)) list.push(...b);
-    else if (b && typeof b === 'object') list.push(b);
-  }
-  // terminador obrigatório
-  list.push({ code: 0, indent: baseIndent, parameters: [] });
-  return list;
-}
-
-/** Show Text: faceName, faceIndex, background(0 janela,1 escuro,2 transp), position(0 cima,1 meio,2 baixo) + linhas */
-function showText(lines, { face = '', faceIndex = 0, background = 0, position = 2 } = {}) {
-  return ({ push, baseIndent }) => {
-    push(101, [face, faceIndex, background, position], baseIndent);
-    for (const ln of [].concat(lines)) push(401, [ln], baseIndent);
-  };
-}
-
-/** Show Choices simples: choices[], default index, cancelType(-2 ramo,-1 desabilitado) */
-function choices(choiceList, { cancelType = 0, defaultType = 0 } = {}) {
-  return ({ push, baseIndent }) =>
-    push(102, [choiceList, cancelType, defaultType, 2, 0], baseIndent);
-}
-function whenChoice(index, name) {
-  return ({ push, baseIndent }) => push(402, [index, name], baseIndent);
-}
-function endBranch() {
-  return ({ push, baseIndent }) => push(0, [], baseIndent + 1);
-}
-
-/** Controle de variável: id, operação(0=,1+,2-,3*,4/,5%), operand 0=const,1=var,... value */
-function setVar(id, value, op = 0) {
-  return ({ push, baseIndent }) => push(122, [id, id, op, 0, value], baseIndent);
-}
-/** Controle de switch: id, value (0 ON, 1 OFF) */
-function setSwitch(id, on = true) {
-  return ({ push, baseIndent }) => push(121, [id, id, on ? 0 : 1], baseIndent);
-}
-
-/** Transferir jogador: mapId, x, y, direction(0 manter,2 baixo,4 esq,6 dir,8 cima), fade(0 preto,1 branco,2 nenhum) */
-function transfer(mapId, x, y, { direction = 0, fade = 0 } = {}) {
-  return ({ push, baseIndent }) => push(201, [0, mapId, x, y, direction, fade], baseIndent);
-}
-
-/** Tonalidade de tela: [r,g,b,gray] (-255..255), duração frames, wait */
-function tint(tone, duration = 60, wait = true) {
-  return ({ push, baseIndent }) => push(223, [tone, duration, wait], baseIndent);
-}
-function flash(color, duration = 60, wait = true) {
-  return ({ push, baseIndent }) => push(224, [color, duration, wait], baseIndent);
-}
-function shake(power = 5, speed = 5, duration = 60, wait = true) {
-  return ({ push, baseIndent }) => push(225, [power, speed, duration, wait], baseIndent);
-}
-function wait(frames = 60) {
-  return ({ push, baseIndent }) => push(230, [frames], baseIndent);
-}
-function fadeOut() { return ({ push, baseIndent }) => push(221, [], baseIndent); }
-function fadeIn() { return ({ push, baseIndent }) => push(222, [], baseIndent); }
-
-function playBgm(name, { volume = 90, pitch = 100, pan = 0 } = {}) {
-  return ({ push, baseIndent }) => push(241, [{ name, volume, pitch, pan }], baseIndent);
-}
-function playSe(name, { volume = 90, pitch = 100, pan = 0 } = {}) {
-  return ({ push, baseIndent }) => push(250, [{ name, volume, pitch, pan }], baseIndent);
-}
-function fadeoutBgm(seconds = 3) { return ({ push, baseIndent }) => push(242, [seconds], baseIndent); }
-
-/** Chamar evento comum por id */
-function callCommon(id) { return ({ push, baseIndent }) => push(117, [id], baseIndent); }
-
-/** Itens / ouro / membros */
-function changeGold(value, op = 0) { // op 0 ganhar, 1 perder
-  return ({ push, baseIndent }) => push(125, [op, 0, value], baseIndent);
-}
-function changeItem(itemId, value, op = 0) {
-  return ({ push, baseIndent }) => push(126, [itemId, op, 0, value], baseIndent);
-}
-function changeParty(actorId, add = true) { // add true=adicionar
-  return ({ push, baseIndent }) => push(129, [actorId, add ? 0 : 1, 1], baseIndent);
-}
-function recoverAll(actorMode = 0) { // 0 = grupo inteiro
-  return ({ push, baseIndent }) => push(314, [actorMode, 0], baseIndent);
-}
-
-/** Conditional branch por switch ON */
-function ifSwitch(id, on = true) {
-  return ({ push, baseIndent }) => push(111, [0, id, on ? 0 : 1], baseIndent);
-}
-/** Conditional branch por variável: id op(0=,1>=,2<=,3>,4<,5!=) value */
-function ifVar(id, value, op = 0) {
-  return ({ push, baseIndent }) => push(111, [1, id, 0, value, op], baseIndent);
-}
-function elseBranch() { return ({ push, baseIndent }) => push(411, [], baseIndent); }
-
-/** Iniciar batalha: troopId, canEscape, canLose */
-function battle(troopId, { canEscape = true, canLose = false } = {}) {
-  return ({ push, baseIndent }) => push(301, [0, troopId, canEscape, canLose], baseIndent);
-}
-
-/** Abre loja: goods = [[0,itemId,priceType,price,?],...] */
-function shop(goods, purchaseOnly = false) {
-  return ({ push, baseIndent }) => push(302, [...goods[0], purchaseOnly], baseIndent)
-    || goods.slice(1).forEach(g => push(605, [...g], baseIndent));
-}
-
-module.exports = {
-  cmdList, showText, choices, whenChoice, endBranch, setVar, setSwitch, transfer,
-  tint, flash, shake, wait, fadeOut, fadeIn, playBgm, playSe, fadeoutBgm, callCommon,
-  changeGold, changeItem, changeParty, recoverAll, ifSwitch, ifVar, elseBranch, battle, shop,
+// Passos de rota de movimento (usados em cenas como os soldados marchando).
+const R = {
+  down: () => ({ code: 1, parameters: [] }),
+  left: () => ({ code: 2, parameters: [] }),
+  right: () => ({ code: 3, parameters: [] }),
+  up: () => ({ code: 4, parameters: [] }),
+  toward: () => ({ code: 10, parameters: [] }),
+  away: () => ({ code: 11, parameters: [] }),
+  forward: () => ({ code: 12, parameters: [] }),
+  turnDown: () => ({ code: 16, parameters: [] }),
+  turnLeft: () => ({ code: 17, parameters: [] }),
+  turnRight: () => ({ code: 18, parameters: [] }),
+  turnUp: () => ({ code: 19, parameters: [] }),
+  wait: (f = 30) => ({ code: 15, parameters: [f] }),
+  speed: (s = 4) => ({ code: 29, parameters: [s] }),
+  freq: (f = 4) => ({ code: 30, parameters: [f] }),
+  image: (name, idx = 0) => ({ code: 41, parameters: [name, idx] }),
+  walkOn: () => ({ code: 33, parameters: [] }),
+  throughOn: () => ({ code: 37, parameters: [] }),
+  throughOff: () => ({ code: 38, parameters: [] }),
+  transpOn: () => ({ code: 39, parameters: [] }),
+  transpOff: () => ({ code: 40, parameters: [] }),
+  jump: (dx, dy) => ({ code: 14, parameters: [dx, dy] }),
+  se: (name, opt = {}) => ({ code: 44, parameters: [{ name, volume: 90, pitch: 100, pan: 0, ...opt }] }),
 };
+
+class Script {
+  constructor() { this.list = []; this.indent = 0; }
+
+  raw(code, parameters = []) {
+    this.list.push({ code, indent: this.indent, parameters });
+    return this;
+  }
+
+  // -------- texto --------
+  text(lines, { face = '', faceIndex = 0, background = 0, position = 2 } = {}) {
+    this.raw(101, [face, faceIndex, background, position]);
+    for (const ln of [].concat(lines)) this.raw(401, [ln]);
+    return this;
+  }
+  scroll(lines, { speed = 2, noFast = false } = {}) {
+    this.raw(105, [speed, noFast]);
+    for (const ln of [].concat(lines)) this.raw(405, [ln]);
+    return this;
+  }
+
+  // -------- escolhas --------
+  // labels: string[]; handlers: array de fn(s) na mesma ordem; opts.cancel: fn ou índice
+  choice(labels, handlers, { defaultType = 0, cancel = -2, background = 0, positionType = 2 } = {}) {
+    // cancelType: -2 ramo "Cancelar", -1 desabilitado, ou índice
+    let cancelType = -2;
+    if (typeof cancel === 'number') cancelType = cancel;
+    else if (typeof cancel !== 'function') cancelType = -1;
+    this.raw(102, [labels.slice(), cancelType, defaultType, positionType, background]);
+    labels.forEach((label, i) => {
+      this.raw(402, [i, label]);
+      this.indent++;
+      if (handlers[i]) handlers[i](this);
+      this.indent--;
+    });
+    if (typeof cancel === 'function') {
+      this.raw(403, []);
+      this.indent++;
+      cancel(this);
+      this.indent--;
+    }
+    this.raw(404, []);
+    return this;
+  }
+
+  // -------- condições --------
+  ifSwitch(id, thenFn, elseFn, on = true) {
+    this.raw(111, [0, id, on ? 0 : 1]);
+    this._branch(thenFn, elseFn);
+    return this;
+  }
+  // op: 0 =, 1 >=, 2 <=, 3 >, 4 <, 5 !=
+  ifVar(id, value, op, thenFn, elseFn) {
+    this.raw(111, [1, id, 0, value, op]);
+    this._branch(thenFn, elseFn);
+    return this;
+  }
+  ifItem(itemId, thenFn, elseFn) {
+    this.raw(111, [4, itemId]);
+    this._branch(thenFn, elseFn);
+    return this;
+  }
+  _branch(thenFn, elseFn) {
+    this.indent++;
+    if (thenFn) thenFn(this);
+    this.indent--;
+    if (elseFn) {
+      this.raw(411, []);
+      this.indent++;
+      elseFn(this);
+      this.indent--;
+    }
+    this.raw(412, []);
+  }
+
+  // -------- variáveis / switches --------
+  setSwitch(id, on = true) { return this.raw(121, [id, id, on ? 0 : 1]); }
+  setVar(id, value, op = 0) { return this.raw(122, [id, id, op, 0, value]); }
+
+  // -------- itens / ouro / grupo --------
+  gold(value, op = 0) { return this.raw(125, [op, 0, value]); }      // 0 ganhar, 1 perder
+  item(itemId, value, op = 0) { return this.raw(126, [itemId, op, 0, value]); }
+  weapon(id, value, op = 0) { return this.raw(127, [id, op, 0, value, false]); }
+  armor(id, value, op = 0) { return this.raw(128, [id, op, 0, value, false]); }
+  party(actorId, add = true) { return this.raw(129, [actorId, add ? 0 : 1, 1]); }
+  recoverAll() { return this.raw(314, [0, 0]); }
+
+  // -------- tela / som --------
+  transfer(mapId, x, y, { dir = 0, fade = 0 } = {}) { return this.raw(201, [0, mapId, x, y, dir, fade]); }
+  tint(tone, dur = 60, wait = true) { return this.raw(223, [tone, dur, wait]); }
+  flash(color, dur = 60, wait = true) { return this.raw(224, [color, dur, wait]); }
+  shake(power = 5, speed = 5, dur = 60, wait = true) { return this.raw(225, [power, speed, dur, wait]); }
+  wait(frames = 60) { return this.raw(230, [frames]); }
+  fadeOut() { return this.raw(221, []); }
+  fadeIn() { return this.raw(222, []); }
+  scrollMap(dir, distance, speed) { return this.raw(204, [dir, distance, speed]); }
+  bgm(name, opt = {}) { return this.raw(241, [{ name, volume: 90, pitch: 100, pan: 0, ...opt }]); }
+  fadeoutBgm(sec = 3) { return this.raw(242, [sec]); }
+  me(name, opt = {}) { return this.raw(249, [{ name, volume: 90, pitch: 100, pan: 0, ...opt }]); }
+  se(name, opt = {}) { return this.raw(250, [{ name, volume: 90, pitch: 100, pan: 0, ...opt }]); }
+
+  // -------- diversos --------
+  callCommon(id) { return this.raw(117, [id]); }
+  move(charId, steps, { wait = true, repeat = false, skippable = true } = {}) {
+    const rl = [].concat(steps).map((s) => (typeof s === 'function' ? s() : s));
+    rl.push({ code: 0, parameters: [] });
+    return this.raw(205, [charId, { list: rl, repeat, skippable, wait }]);
+  }
+  showAnimAll() { return this.raw(212, [-1, 1, false]); }
+  battle(troopId, { canEscape = true, canLose = false } = {}) {
+    return this.raw(301, [0, troopId, canEscape, canLose]);
+  }
+  shop(goods, purchaseOnly = false) {
+    const norm = (g) => [g[0], g[1], g[2] || 0, g[3] || 0];
+    this.raw(302, [...norm(goods[0]), purchaseOnly]);
+    for (let i = 1; i < goods.length; i++) this.raw(605, [...norm(goods[i]), purchaseOnly]);
+    return this;
+  }
+  label(name) { return this.raw(118, [name]); }
+  jumpToLabel(name) { return this.raw(119, [name]); }
+  comment(text) { return this.raw(108, [text]); }
+
+  // finaliza a lista com o terminador obrigatório {code:0}
+  build() {
+    return this.list.concat([{ code: 0, indent: 0, parameters: [] }]);
+  }
+}
+
+/** Açúcar: cria um Script, roda fn e retorna a lista pronta. */
+function script(fn) {
+  const s = new Script();
+  fn(s);
+  return s.build();
+}
+
+module.exports = { Script, script, R };

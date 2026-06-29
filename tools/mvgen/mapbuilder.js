@@ -79,6 +79,11 @@ function page({
   moveFrequency = 3,
   tileId = 0,
 }) {
+  // aceita um Script (com .build()) ou uma lista; sem lista → terminador mínimo
+  let cmdListResolved;
+  if (list && typeof list.build === 'function') cmdListResolved = list.build();
+  else if (Array.isArray(list) && list.length) cmdListResolved = list;
+  else cmdListResolved = [{ code: 0, indent: 0, parameters: [] }];
   return {
     conditions: Object.assign({
       actorId: 1, actorValid: false,
@@ -90,7 +95,7 @@ function page({
     }, conditions),
     directionFix,
     image: { tileId, characterName, direction, pattern, characterIndex },
-    list,
+    list: cmdListResolved,
     moveFrequency, moveRoute: {
       list: [{ code: 0, parameters: [] }], repeat: true, skippable: false, wait: false,
     },
