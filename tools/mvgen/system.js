@@ -47,9 +47,9 @@ function buildSystem({ switches, variables }) {
       se('Recovery'), se('Miss'), se('Evasion1'), se('Evasion2'), se('Reflection'),
       se('Shop1'), se('Item3'), se('Item3'), se('Item1'),
     ],
-    startMapId: 100, // mapa da intro (autorun)
-    startX: 8,
-    startY: 7,
+    startMapId: 100, // mapa da cutscene de abertura (autorun)
+    startX: 20,
+    startY: 9,
     switches,
     terms: {
       basic: ['Nível', 'Nv', 'HP', 'HP', 'MP', 'MP', 'TP', 'TP', 'EXP', 'EXP'],

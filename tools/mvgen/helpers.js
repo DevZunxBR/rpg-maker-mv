@@ -129,6 +129,21 @@ class Script {
   me(name, opt = {}) { return this.raw(249, [{ name, volume: 90, pitch: 100, pan: 0, ...opt }]); }
   se(name, opt = {}) { return this.raw(250, [{ name, volume: 90, pitch: 100, pan: 0, ...opt }]); }
 
+  // -------- imagens / clima (cinemática) --------
+  // origin: 0 canto sup-esq, 1 centro. blend: 0 normal,1 add,2 mult,3 screen.
+  showPic(id, name, { origin = 0, x = 0, y = 0, sw = 100, sh = 100, opacity = 255, blend = 0 } = {}) {
+    return this.raw(231, [id, name, origin, 0, x, y, sw, sh, opacity, blend]);
+  }
+  movePic(id, { origin = 0, x = 0, y = 0, sw = 100, sh = 100, opacity = 255, blend = 0, dur = 30, wait = true } = {}) {
+    return this.raw(232, [id, origin, 0, x, y, sw, sh, opacity, blend, dur, wait]);
+  }
+  rotatePic(id, speed) { return this.raw(233, [id, speed]); }
+  tintPic(id, tone, dur = 30, wait = true) { return this.raw(234, [id, tone, dur, wait]); }
+  erasePic(id) { return this.raw(235, [id]); }
+  // type: 'none','rain','storm','snow'
+  weather(type, power = 5, dur = 30, wait = true) { return this.raw(236, [type, power, dur, wait]); }
+  followers(show) { return this.raw(216, [show ? 0 : 1]); }
+
   // -------- diversos --------
   callCommon(id) { return this.raw(117, [id]); }
   move(charId, steps, { wait = true, repeat = false, skippable = true } = {}) {

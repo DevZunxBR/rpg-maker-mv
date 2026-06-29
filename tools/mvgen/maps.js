@@ -3,6 +3,7 @@ const MB = require('./mapbuilder');
 const { TILE, blankData, setTile, fillRect, border, makeEvent, page, makeMap } = MB;
 const { Script, R } = require('./helpers');
 const { SW, VAR } = require('./constants');
+const cutscene = require('./cutscene');
 
 const MAPS = {};
 const INFO = {};
@@ -55,108 +56,8 @@ function exitTo(id, x, y, wx, wy) {
 // INTRO CINEMATOGRÁFICA (mapa 100) — texto rolando + soldados até a porta
 // =====================================================================
 function buildIntro() {
-  const w = 17, h = 17;
-  const data = blankData(w, h, TILE.DIRT);
-  // caminho de terra batida no centro + grama nas laterais
-  fillRect(data, w, h, 0, 0, w - 1, h - 1, 0, TILE.GRASS);
-  fillRect(data, w, h, 6, 2, 10, 16, 0, TILE.DIRT);
-  // "casa" no topo com porta
-  fillRect(data, w, h, 5, 0, 11, 2, 2, TILE.ROOF);
-  fillRect(data, w, h, 5, 3, 11, 3, 1, TILE.WALL);
-
-  // Soldados (eventos 2..5) — começam embaixo
-  const soldiers = [
-    { id: 2, x: 7, y: 15, idx: 0 },
-    { id: 3, x: 9, y: 15, idx: 1 },
-    { id: 4, x: 6, y: 16, idx: 4 },
-    { id: 5, x: 10, y: 16, idx: 5 },
-  ].map((sd) => ev({ id: sd.id, name: 'soldado', x: sd.x, y: sd.y, pages: [pg({
-    characterName: 'People3', characterIndex: sd.idx, direction: 8, trigger: 0, priorityType: 1,
-    walkAnime: true,
-  })] }));
-
-  // Porta (evento 6) — só gráfico
-  const doorEv = ev({ id: 6, name: 'porta', x: 8, y: 3, pages: [pg({
-    tileId: 0, characterName: '!Door1', characterIndex: 0, direction: 2, trigger: 0, priorityType: 0,
-  })] });
-
-  // Diretor da cena (evento 1, autorun)
-  const director = ev({ id: 1, name: 'INTRO', x: 0, y: 0, pages: [pg({
-    trigger: 3, priorityType: 0, through: true,
-    list: S((s) => {
-      s.raw(241, [{ name: 'Theme6', volume: 80, pitch: 100, pan: 0 }]); // BGM
-      s.tint([-255, -255, -255, 255], 1, false); // tela preta
-      s.move(-1, [R.transpOn()], { wait: true }); // esconde o herói
-      s.wait(30);
-      // ----- TEXTO ROLANDO -----
-      s.scroll([
-        '\\C[6]As Crônicas de Aethelgard\\C[0]',
-        '',
-        'Há trezentos anos, os Seladores',
-        'aprisionaram o Devorador de Auroras —',
-        'aquele que consome a luz do mundo.',
-        '',
-        'Mas a selagem se desfaz.',
-        'As auroras minguam no céu.',
-        'Vilarejos perdem a cor... e a memória.',
-        '',
-        'E numa noite sem estrelas,',
-        'em Vilar de Auroria,',
-        'a marca de um antigo Selador desperta',
-        'na pele de um jovem chamado \\C[6]Kael\\C[0].',
-        '',
-        'Naquela mesma noite,',
-        'soldados do Reino batem à sua porta...',
-        '',
-      ], { speed: 3 });
-      // ----- CENA: revela a noite -----
-      s.tint([-120, -110, -40, 100], 90, true); // noite azulada
-      s.wait(30);
-      // ----- SOLDADOS MARCHAM ATÉ A PORTA (em paralelo) -----
-      const march = (steps) => [R.speed(4), R.walkOn(), ...Array(steps).fill(0).map(() => R.up())];
-      s.move(2, march(10), { wait: false });
-      s.move(3, march(10), { wait: false });
-      s.move(4, [R.speed(4), R.walkOn(), ...Array(2).fill(0).map(() => R.up()), R.right(),
-        ...Array(8).fill(0).map(() => R.up())], { wait: false });
-      s.move(5, [R.speed(4), R.walkOn(), ...Array(2).fill(0).map(() => R.up()), R.left(),
-        ...Array(8).fill(0).map(() => R.up())], { wait: true });
-      s.wait(40);
-      // os soldados se viram para a porta
-      s.move(2, [R.turnUp()], { wait: false });
-      s.move(3, [R.turnUp()], { wait: false });
-      s.wait(20);
-      // ----- BATEM NA PORTA -----
-      s.se('Knock', { volume: 100 });
-      s.wait(45);
-      s.se('Knock', { volume: 100 });
-      s.wait(30);
-      s.text(['\\C[4]Soldado\\C[0]: É esta. A casa do jovem da marca.'], { background: 1, position: 2 });
-      s.text(['\\C[4]Capitão\\C[0]: O Rei o quer vivo. Abram a porta.'], { background: 1, position: 2 });
-      // porta abre
-      s.se('Door1', { volume: 100 });
-      s.flash([255, 255, 230, 160], 30, true);
-      s.move(6, [R.transpOn()], { wait: true }); // porta "abre" (some)
-      s.wait(30);
-      s.text(['\\C[6]Kael\\C[0]: ...o que vocês querem comigo a esta hora?'], { background: 1, position: 2 });
-      s.text(['A partir de agora, o destino de Aethelgard está em suas mãos.'], { background: 1, position: 1 });
-      s.wait(20);
-      // encerra a intro e entrega o controle ao jogador
-      s.tint([0, 0, 0, 0], 60, true);
-      s.fadeoutBgm(2);
-      s.setSwitch(SW.INTRO_DONE, true);
-      s.setSwitch(SW.MQ1_ACTIVE, true);
-      s.setVar(VAR.MAIN_STAGE, 1, 0);
-      s.item(21, 1, 0); // Mapa de Aethelgard
-      s.item(22, 1, 0); // Diário de Missões
-      s.move(-1, [R.transpOff()], { wait: true }); // mostra o herói de novo
-      s.transfer(2, 8, 12, { dir: 8, fade: 0 }); // vai para Auroria
-    }),
-  })] });
-
-  register(100, 'INTRO', makeMap({
-    width: w, height: h, tilesetId: 1, data,
-    events: [director, ...soldiers, doorEv], displayName: '', autoplayBgm: false,
-  }));
+  // A cinemática de abertura vive em cutscene.js (palco + coreografia em 8 beats).
+  register(100, 'INTRO — A Noite da Marca', cutscene.buildIntro());
 }
 
 // =====================================================================

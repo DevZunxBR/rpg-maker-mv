@@ -7,8 +7,10 @@ const { buildSystem } = require('./system');
 const { commonEvents } = require('./commonevents');
 const { buildSwitchNames, buildVariableNames } = require('./constants');
 const M = require('./maps');
+const { buildAssets } = require('./assets');
 
 const OUT = path.resolve(__dirname, '../../data');
+const ROOT = path.resolve(__dirname, '../..');
 
 function writeJSON(name, obj) {
   fs.writeFileSync(path.join(OUT, name), JSON.stringify(obj));
@@ -69,9 +71,12 @@ function main() {
   // ---- MapInfos ----
   written.push(writeJSON('MapInfos.json', buildMapInfos()));
 
+  // ---- Assets de imagem da cinemática (img/pictures) ----
+  const pics = buildAssets(ROOT);
+
   console.log('Gerado em', OUT);
   console.log('Arquivos:', written.join(', '));
-  console.log('Total de mapas:', mapCount);
+  console.log('Total de mapas:', mapCount, '| Imagens da cutscene:', pics.length);
 }
 
 main();
